@@ -1,0 +1,6 @@
+name = SP Afdelingsimport
+description = Opvragen van afdelingen uit CiviCRM voor gebruik op SP.nl
+version = 1.0
+core = 7.x
+package = sprbs
+dependencies[] = spciviapi
