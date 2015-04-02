@@ -8,14 +8,14 @@ function spafdimport_drush_command() {
 	$items = array();
 
 	$items['afdimportnew'] = array(
-		'description' => "SP Afdelingen Import",
+		'description' => "SP Afdelingen Import (new)",
 		'aliases'     => array('afdnew'),
-	);
+        );
 
 	return $items;
 }
 
-function drush_spafdimport() {
+function drush_afdimportnew() {
 	return spafdimport_afdelingen();
 }
 
