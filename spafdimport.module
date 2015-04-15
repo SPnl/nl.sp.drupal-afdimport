@@ -107,7 +107,7 @@ function spafdimport_afdelingen() {
 		else
 	        	$provname = '';
 
-                // echo "$naam $website $provname...\n";
+                // echo "$naam $website " . ($provname ? $provname : "<strong>NO PROVINCE</strong>") . "...<br />\n";
 
 		// Rest van het script is zoals de afdimport-module in SPwebteam/sp-website:
 
@@ -140,7 +140,7 @@ function spafdimport_afdelingen() {
 		$node_wrapped         = entity_metadata_wrapper('node', $node);
 		$node_wrapped->title  = $naam;
 		$node_wrapped->author = $import_user->uid;
-		// $node_wrapped->link->set(array('url' => $website));
+		$node_wrapped->link->set(array('url' => $website));
 		// Get provincie term id.
 		$provincie = taxonomy_get_term_by_name($provname, 'provincie');
 		if ( ! empty($provincie)) {
