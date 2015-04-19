@@ -55,7 +55,7 @@ function spafdimport_afdelingen() {
 
 		// Clean up name
 		$naam = $afdeling->display_name;
-		$naam = str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam);
+		$naam = trim(str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam));
 
 		// Get website
 		$civiapi->Website->Get(array(
