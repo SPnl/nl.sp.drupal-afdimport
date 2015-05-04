@@ -57,6 +57,11 @@ function spafdimport_afdelingen() {
 		$naam = $afdeling->display_name;
 		$naam = trim(str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam));
 
+		// Filter partijbureau.
+		if ($naam == 'SP Partijbureau') {
+		  continue;
+		}
+
 		// Get website
 		$civiapi->Website->Get(array(
 			'contact_id' => $afdeling->contact_id,
