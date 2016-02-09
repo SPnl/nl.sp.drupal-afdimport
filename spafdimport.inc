@@ -26,13 +26,19 @@ function spafdimport_afdelingen() {
         ));
         $cf_prov = 'custom_' . $civiapi->result()->id;
 
+        $civiapi->CustomField->Getsingle(array(
+                'name' => 'Regio',
+                'return' => 'id',
+        ));
+        $cf_regio = 'custom_' . $civiapi->result()->id;
+
 	// Get import data.
 	$civiapi->Contact->Get(array(
 		'contact_type'          => 'Organization',
                 'contact_sub_type'      => 'SP_afdeling',
                 'tag'                   => implode(',',array($tag_io, $tag_erkend)),
                 'option.limit'          => 9999,
-                'return'                => implode(',',array('contact_id','display_name',$cf_prov)),
+                'return'                => implode(',',array('contact_id','display_name',$cf_prov, $cf_regio)),
               ));
 	$afdelingen = $civiapi->result()->values;
 
@@ -47,6 +53,19 @@ function spafdimport_afdelingen() {
         $provinces = array(); 
         foreach($prov as $p) {
           $provinces[$p->contact_id] = str_replace(array('SP-provincie '), '', $p->display_name);
+        }
+
+	// Get regios
+	$civiapi->Contact->Get(array(
+		'contact_type'          => 'Organization',
+                'contact_sub_type'      => 'SP_Regio',
+                'option.limit'          => 9999,
+                'return'                => implode(',',array('contact_id','display_name')),
+	));
+	$regios_raw = $civiapi->result()->values;
+        $regios = array(); 
+        foreach($regios_raw as $r) {
+          $regios[$r->contact_id] = str_replace(array('SP-regio '), '', $r->display_name);
         }
 
 	foreach ($afdelingen as $afdeling) {
@@ -77,8 +96,14 @@ function spafdimport_afdelingen() {
                         $provname = $provinces[$afdeling->$cf_prov];
 		else
 	        	$provname = '';
-
                 // echo "$naam $website " . ($provname ? $provname : "<strong>NO PROVINCE</strong>") . "...<br />\n";
+
+                // Get regio name
+		if (array_key_exists($afdeling->$cf_regio, $regios))
+                        $regionname = $regios[$afdeling->$cf_regio];
+		else
+	        	$regionname = '';
+
 
 		// Rest van het script is zoals de afdimport-module in SPwebteam/sp-website:
 
@@ -117,6 +142,12 @@ function spafdimport_afdelingen() {
 		if ( ! empty($provincie)) {
 			$provincie = reset($provincie);
 			$node_wrapped->provincie->set($provincie->tid);
+		}
+		// Get regio term id.
+		$region = taxonomy_get_term_by_name($regionname, 'regio');
+		if ( ! empty($region)) {
+			$region = reset($region);
+			$node_wrapped->regio->set($region->tid);
 		}
 		$node_wrapped->save();
 		// Store Afdelingsnaam for cleanup.
