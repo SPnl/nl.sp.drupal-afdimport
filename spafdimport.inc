@@ -1,217 +1,235 @@
 <?php
 
 function spafdimport_afdelingen() {
-  
-        set_time_limit(0);
 
-	$civiapi     = spciviapi_get_api();
-	$import_user = spafdimport_get_import_user();
+  set_time_limit(0);
 
-	_spafdimport_output_start('Afdelingen import: ');
+  $civiapi     = spciviapi_get_api();
+  $import_user = spafdimport_get_import_user();
 
-        // Get tags and custom field id
-        $civiapi->Tag->Getsingle(array(
-                'name' => 'Erkend',
-        ));
-        $tag_erkend = $civiapi->result()->id;
+  _spafdimport_output_start('Afdelingen import: ');
 
-        $civiapi->Tag->Getsingle(array(
-                'name' => 'In Oprichting',
-        ));
-        $tag_io = $civiapi->result()->id;
+  // Get tags and custom field id
+  $civiapi->Tag->Get();
+  $tags_raw = $civiapi->result()->values;
+  if (!empty($tags_raw)) {
+    foreach ($tags_raw as $tag) {
+      $tags[$tag->name] = $tag->id;
+    }
+  }
 
-        $civiapi->CustomField->Getsingle(array(
-                'name' => 'Provincie',
-                'return' => 'id',
-        ));
-        $cf_prov = 'custom_' . $civiapi->result()->id;
+  $civiapi->CustomField->Getsingle(array(
+    'name' => 'Provincie',
+    'return' => 'id',
+  ));
+  $cf_prov = 'custom_' . $civiapi->result()->id;
 
-        $civiapi->CustomField->Getsingle(array(
-                'name' => 'Regio',
-                'return' => 'id',
-        ));
-        $cf_regio = 'custom_' . $civiapi->result()->id;
+  $civiapi->CustomField->Getsingle(array(
+    'name' => 'Regio',
+    'return' => 'id',
+  ));
+  $cf_regio = 'custom_' . $civiapi->result()->id;
 
-	// Get import data.
-	$civiapi->Contact->Get(array(
-		'contact_type'          => 'Organization',
-                'contact_sub_type'      => 'SP_afdeling',
-                'tag'                   => implode(',',array($tag_io, $tag_erkend)),
-                'option.limit'          => 9999,
-                'return'                => implode(',',array('contact_id','display_name',$cf_prov, $cf_regio)),
-              ));
-	$afdelingen = $civiapi->result()->values;
+  // Get import data.
+  $civiapi->Contact->Get(array(
+    'contact_type'          => 'Organization',
+    'contact_sub_type'      => 'SP_afdeling',
+    'tag'                   => implode(',',array(
+      $tags['In Oprichting'],
+      $tags['Erkend'],
+      $tags['Opgeheven'],
+      $tags['Werkgroep'],
+    )),
+    'option.limit'          => 9999,
+    'return'                => implode(',',array('contact_id','display_name',$cf_prov, $cf_regio)),
+  ));
+  $afdelingen = $civiapi->result()->values;
 
-	// Get provinces
-	$civiapi->Contact->Get(array(
-		'contact_type'          => 'Organization',
-                'contact_sub_type'      => 'SP_provincie',
-                'option.limit'          => 9999,
-                'return'                => implode(',',array('contact_id','display_name')),
-	));
-	$prov = $civiapi->result()->values;
-        $provinces = array(); 
-        foreach($prov as $p) {
-          $provinces[$p->contact_id] = str_replace(array('SP-provincie '), '', $p->display_name);
-        }
+  // Get provinces
+  $civiapi->Contact->Get(array(
+    'contact_type'          => 'Organization',
+    'contact_sub_type'      => 'SP_provincie',
+    'option.limit'          => 9999,
+    'return'                => implode(',',array('contact_id','display_name')),
+  ));
+  $prov = $civiapi->result()->values;
+  $provinces = array(); 
+  foreach($prov as $p) {
+    $provinces[$p->contact_id] = str_replace(array('SP-provincie '), '', $p->display_name);
+  }
 
-	// Get regios
-	$civiapi->Contact->Get(array(
-		'contact_type'          => 'Organization',
-                'contact_sub_type'      => 'SP_Regio',
-                'option.limit'          => 9999,
-                'return'                => implode(',',array('contact_id','display_name')),
-	));
-	$regios_raw = $civiapi->result()->values;
-        $regios = array(); 
-        foreach($regios_raw as $r) {
-          $regios[$r->contact_id] = str_replace(array('SP-regio '), '', $r->display_name);
-        }
+  // Get regios
+  $civiapi->Contact->Get(array(
+    'contact_type'          => 'Organization',
+    'contact_sub_type'      => 'SP_Regio',
+    'option.limit'          => 9999,
+    'return'                => implode(',',array('contact_id','display_name')),
+  ));
+  $regios_raw = $civiapi->result()->values;
+  $regios = array(); 
+  foreach($regios_raw as $r) {
+    $regios[$r->contact_id] = str_replace(array('SP-regio '), '', $r->display_name);
+  }
 
-	foreach ($afdelingen as $afdeling) {
-		// Show progress.
-		_spafdimport_output_progress();
+  foreach ($afdelingen as $afdeling) {
+    // Show progress.
+    _spafdimport_output_progress();
 
-		// Clean up name
-		$naam = $afdeling->display_name;
-		$naam = trim(str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam));
+    // Clean up name
+    $naam = $afdeling->display_name;
+    $naam = trim(str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam));
 
-		// Filter partijbureau.
-		if ($naam == 'SP Partijbureau') {
-		  continue;
-		}
+    // Filter partijbureau.
+    if ($naam == 'SP Partijbureau') {
+      continue;
+    }
 
-		// Get website
-		$civiapi->Website->Get(array(
-			'contact_id' => $afdeling->contact_id,
-		));
-		$websites = $civiapi->result();
-		if ($websites && $websites->count > 0)
-			$website = array_shift($websites->values)->url;
-		else
-			$website = '';
+    // Get website
+    $civiapi->Website->Get(array(
+      'contact_id' => $afdeling->contact_id,
+    ));
+    $websites = $civiapi->result();
+    if ($websites && $websites->count > 0)
+      $website = array_shift($websites->values)->url;
+    else
+      $website = '';
 
-                // Get province name
-		if (array_key_exists($afdeling->$cf_prov, $provinces))
-                        $provname = $provinces[$afdeling->$cf_prov];
-		else
-	        	$provname = '';
-                // echo "$naam $website " . ($provname ? $provname : "<strong>NO PROVINCE</strong>") . "...<br />\n";
+    // Get province name
+    if (array_key_exists($afdeling->$cf_prov, $provinces))
+      $provname = $provinces[$afdeling->$cf_prov];
+    else
+      $provname = '';
+    // echo "$naam $website " . ($provname ? $provname : "<strong>NO PROVINCE</strong>") . "...<br />\n";
 
-                // Get regio name
-		if (array_key_exists($afdeling->$cf_regio, $regios))
-                        $regionname = $regios[$afdeling->$cf_regio];
-		else
-	        	$regionname = '';
+    // Get regio name
+    if (array_key_exists($afdeling->$cf_regio, $regios))
+      $regionname = $regios[$afdeling->$cf_regio];
+    else
+      $regionname = '';
 
+    // Get status.
+    $status = '';
+    $civiapi->EntityTag->getSingle(array(
+      'entity_id' => $afdeling->id,
+    ));
+    if (!$civiapi->result()->is_error) {
+      $tag_id = $civiapi->result()->tag_id;
+      $status = array_search($tag_id, $tags);
+    }
+    else {
+      $status = 'civierror';
+    }
 
-		// Rest van het script is zoals de afdimport-module in SPwebteam/sp-website:
+    // Rest van het script is zoals de afdimport-module in SPwebteam/sp-website:
 
-		// Get afdeling.
-		$query = new EntityFieldQuery();
-		$query->entityCondition('entity_type', 'node')
-		      ->entityCondition('bundle', 'afdeling')
-		      ->propertyCondition('title', $naam);
-		$afdelingen = $query->execute();
+    // Get afdeling.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'afdeling')
+      ->propertyCondition('title', $naam);
+    $afdelingen = $query->execute();
 
-		// Check if afdeling exists.
-		if ( ! empty($afdelingen['node'])) {
-			// Update existing afdeling with current values.
-			_spafdimport_output_text('Updating afdeling ' . $naam);
-			$node = reset($afdelingen['node']);
-		}
-		else {
-			// Create new afdeling.
-			_spafdimport_output_text('Creating afdeling ' . $naam);
-			$node = entity_create('node', array(
-				'type'     => 'afdeling',
-				'title'    => $naam,
-				'status'   => 1,
-				'language' => 'nl',
-				'uid'      => $import_user->uid,
-				'promote'  => 0,
-			));
-		}
-		// Update values.
-		$node_wrapped         = entity_metadata_wrapper('node', $node);
-		$node_wrapped->title  = $naam;
-		$node_wrapped->author = $import_user->uid;
-		$node_wrapped->link->set(array('url' => $website));
-		// Get provincie term id.
-		$provincie = taxonomy_get_term_by_name($provname, 'provincie');
-		if ( ! empty($provincie)) {
-			$provincie = reset($provincie);
-			$node_wrapped->provincie->set($provincie->tid);
-		}
-		// Get regio term id.
-		$region = taxonomy_get_term_by_name($regionname, 'regio');
-		if ( ! empty($region)) {
-			$region = reset($region);
-			$node_wrapped->regio->set($region->tid);
-		}
-		$node_wrapped->save();
-		// Store Afdelingsnaam for cleanup.
-		$new_afdelingsnames[] = $naam;
-	}
-	// Cleanup afdelingen that do not exist anymore.
-	_spafdimport_output_text("\n");
-	$query = new EntityFieldQuery();
-	// Get current afdelingen.
-	$query->entityCondition('entity_type', 'node')
-	      ->entityCondition('bundle', 'afdeling');
-	$afdelingen = $query->execute();
-	foreach ($afdelingen['node'] as $afdeling) {
-		$node = node_load($afdeling->nid);
-		if ( ! in_array($node->title, $new_afdelingsnames)) {
-			// Delete afdeling.
-			_spafdimport_output_text('Deleting afdeling ' . $node->title);
-			entity_delete('node', $node->nid);
-		}
-	}
-	_spafdimport_output_finish();
+    // Check if afdeling exists.
+    if ( ! empty($afdelingen['node'])) {
+      // Update existing afdeling with current values.
+      _spafdimport_output_text('Updating afdeling ' . $naam);
+      $node = reset($afdelingen['node']);
+    }
+    else {
+      // Create new afdeling.
+      _spafdimport_output_text('Creating afdeling ' . $naam);
+      $node = entity_create('node', array(
+        'type'     => 'afdeling',
+        'title'    => $naam,
+        'status'   => 1,
+        'language' => 'nl',
+        'uid'      => $import_user->uid,
+        'promote'  => 0,
+      ));
+    }
+    // Update values.
+    $node_wrapped         = entity_metadata_wrapper('node', $node);
+    $node_wrapped->title  = $naam;
+    $node_wrapped->author = $import_user->uid;
+    $node_wrapped->link->set(array('url' => $website));
+    // Get provincie term id.
+    $provincie = taxonomy_get_term_by_name($provname, 'provincie');
+    if ( ! empty($provincie)) {
+      $provincie = reset($provincie);
+      $node_wrapped->provincie->set($provincie->tid);
+    }
+    // Get regio term id.
+    $region = taxonomy_get_term_by_name($regionname, 'regio');
+    if ( ! empty($region)) {
+      $region = reset($region);
+      $node_wrapped->regio->set($region->tid);
+    }
+    if ($status != 'civierror') {
+      $node_wrapped->afd_status->set($status);
+    }
+    $node_wrapped->save();
+    // Store Afdelingsnaam for cleanup.
+    $new_afdelingsnames[] = $naam;
+  }
+  // Cleanup afdelingen that do not exist anymore.
+  _spafdimport_output_text("\n");
+  $query = new EntityFieldQuery();
+  // Get current afdelingen.
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'afdeling');
+  $afdelingen = $query->execute();
+  foreach ($afdelingen['node'] as $afdeling) {
+    $node = node_load($afdeling->nid);
+    if ( ! in_array($node->title, $new_afdelingsnames)) {
+      // Delete afdeling.
+      _spafdimport_output_text('Deleting afdeling ' . $node->title);
+      entity_delete('node', $node->nid);
+    }
+  }
+  _spafdimport_output_finish();
 }
 
 function spafdimport_get_import_user() {
-	if ( ! ($user = user_load_by_name('import_user'))) {
-		$password = user_password(8);
-		$fields   = array(
-			'name'   => 'import_user',
-			'mail'   => 'import_user@example.com',
-			'pass'   => $password,
-			'status' => 1,
-			'init'   => 'Email',
-			'roles'  => array(
-				DRUPAL_AUTHENTICATED_RID => 'authenticated user',
-			),
-		);
+  if ( ! ($user = user_load_by_name('import_user'))) {
+    $password = user_password(8);
+    $fields   = array(
+      'name'   => 'import_user',
+      'mail'   => 'import_user@example.com',
+      'pass'   => $password,
+      'status' => 1,
+      'init'   => 'Email',
+      'roles'  => array(
+        DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+      ),
+    );
 
-		//the first parameter is left blank so a new user is created
-		$user = user_save(null, $fields);
-	}
+    //the first parameter is left blank so a new user is created
+    $user = user_save(null, $fields);
+  }
 
-	return $user;
+  return $user;
 }
 
 function _spafdimport_output_text($text) {
-	if (function_exists('drush_print'))
-          drush_print($text);
-        else
-          echo($text . "\n");
+  if (function_exists('drush_print'))
+    drush_print($text);
+  else
+    echo($text . "\n");
 }
 
 function _spafdimport_output_start($label) {
-	if (function_exists('drush_print'))
-		drush_print($label . ' ', 0, null, false);
-        else
-                echo($label . ' ');
+  if (function_exists('drush_print'))
+    drush_print($label . ' ', 0, null, false);
+  else
+    echo($label . ' ');
 }
 
 function _spafdimport_output_progress() {
-	if (function_exists('drush_print'))
-		drush_print('.', 0, null, false);
+  if (function_exists('drush_print'))
+    drush_print('.', 0, null, false);
 }
 
 function _spafdimport_output_finish() {
-	if (function_exists('drush_print'))
-		drush_print('', 0, null, true);
+  if (function_exists('drush_print'))
+    drush_print('', 0, null, true);
 }
