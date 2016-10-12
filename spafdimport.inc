@@ -181,9 +181,10 @@ function spafdimport_afdelingen() {
   foreach ($afdelingen['node'] as $afdeling) {
     $node = node_load($afdeling->nid);
     if ( ! in_array($node->title, $new_afdelingsnames)) {
-      // Delete afdeling.
-      _spafdimport_output_text('Deleting afdeling ' . $node->title);
-      entity_delete('node', $node->nid);
+      // Unpublish afdeling.
+      _spafdimport_output_text('Unpublishing afdeling ' . $node->title);
+      $node->status = 0;
+      node_save($node);
     }
   }
   _spafdimport_output_finish();
