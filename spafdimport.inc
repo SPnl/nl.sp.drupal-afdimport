@@ -186,6 +186,10 @@ function spafdimport_afdelingen() {
       $node->status = 0;
       node_save($node);
     }
+    else {
+      // Rebuild node permissions.
+      node_access_acquire_grants($node);
+    }
   }
   _spafdimport_output_finish();
 }
