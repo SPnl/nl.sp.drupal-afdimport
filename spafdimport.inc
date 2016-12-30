@@ -152,6 +152,8 @@ function spafdimport_afdelingen() {
     $node_wrapped->title  = $naam;
     $node_wrapped->author = $import_user->uid;
     $node_wrapped->link->set(array('url' => $website));
+    // Set afdeling id.
+    $node_wrapped->afd_id->set($afdeling->id);
     // Get provincie term id.
     $provincie = taxonomy_get_term_by_name($provname, 'provincie');
     if ( ! empty($provincie)) {
