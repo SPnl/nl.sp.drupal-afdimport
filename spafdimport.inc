@@ -11,12 +11,15 @@ function spafdimport_afdelingen() {
 
   // Get tags and custom field id
   $civiapi->Tag->Get(array(
-    'name' => array('IN' => array("Erkend", "In Oprichting", "Opgeheven", "Werkgroep")),
   ));
+
+
   $tags_raw = $civiapi->result()->values;
   if (!empty($tags_raw)) {
     foreach ($tags_raw as $tag) {
-      $tags[$tag->name] = $tag->id;
+      if (in_array($tag->name, array("Erkend", "In Oprichting", "Opgeheven", "Werkgroep"))) {
+        $tags[$tag->name] = $tag->id;
+      }
     }
   }
 
@@ -131,13 +134,13 @@ function spafdimport_afdelingen() {
     $query->entityCondition('entity_type', 'node')
       ->entityCondition('bundle', 'afdeling')
       ->propertyCondition('title', $naam);
-    $afdelingen = $query->execute();
+    $existing_afdelingen = $query->execute();
 
     // Check if afdeling exists.
-    if ( ! empty($afdelingen['node'])) {
+    if ( ! empty($existing_afdelingen['node'])) {
       // Update existing afdeling with current values.
       _spafdimport_output_text('Updating afdeling ' . $naam);
-      $node = reset($afdelingen['node']);
+      $node = reset($existing_afdelingen['node']);
     }
     else {
       // Create new afdeling.
@@ -157,9 +160,13 @@ function spafdimport_afdelingen() {
     $node_wrapped->author = $import_user->uid;
     $node_wrapped->link->set(array('url' => $website));
     // Set afdeling email.
-    $node_wrapped->afd_email->set($afdeling->email);
+    if (isset($node_wrapped->afd_email)) {
+      $node_wrapped->afd_email->set($afdeling->email);
+    }
     // Set afdeling id.
-    $node_wrapped->afd_id->set($afdeling->id);
+    if (isset($node_wrapped->afd_id)) {
+      $node_wrapped->afd_id->set($afdeling->id);
+    }
     // Get provincie term id.
     $provincie = taxonomy_get_term_by_name($provname, 'provincie');
     if ( ! empty($provincie)) {
