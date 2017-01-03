@@ -10,7 +10,9 @@ function spafdimport_afdelingen() {
   _spafdimport_output_start('Afdelingen import: ');
 
   // Get tags and custom field id
-  $civiapi->Tag->Get();
+  $civiapi->Tag->Get(array(
+    'name' => array('IN' => array("Erkend", "In Oprichting", "Opgeheven", "Werkgroep")),
+  ));
   $tags_raw = $civiapi->result()->values;
   if (!empty($tags_raw)) {
     foreach ($tags_raw as $tag) {
@@ -34,14 +36,9 @@ function spafdimport_afdelingen() {
   $civiapi->Contact->Get(array(
     'contact_type'          => 'Organization',
     'contact_sub_type'      => 'SP_afdeling',
-    'tag'                   => implode(',',array(
-      $tags['In Oprichting'],
-      $tags['Erkend'],
-      $tags['Opgeheven'],
-      $tags['Werkgroep'],
-    )),
+    'tag'                   => implode(',',$tags),
     'option.limit'          => 9999,
-    'return'                => implode(',',array('contact_id','display_name',$cf_prov, $cf_regio)),
+    'return'                => implode(',',array('email', 'contact_id','display_name',$cf_prov, $cf_regio)),
   ));
   $afdelingen = $civiapi->result()->values;
 
@@ -107,14 +104,21 @@ function spafdimport_afdelingen() {
     else
       $regionname = '';
 
+
     // Get status.
     $status = '';
-    $civiapi->EntityTag->getSingle(array(
+    $civiapi->EntityTag->get(array(
       'entity_id' => $afdeling->id,
     ));
+
     if (!$civiapi->result()->is_error) {
-      $tag_id = $civiapi->result()->tag_id;
-      $status = array_search($tag_id, $tags);
+      $tags_selected = $civiapi->result()->values;
+      foreach ($tags_selected as $tag) {
+        if (in_array($tag->tag_id, $tags)) {
+          $status = array_search($tag->tag_id, $tags);
+          break;
+        }
+      }
     }
     else {
       $status = 'civierror';
@@ -152,6 +156,8 @@ function spafdimport_afdelingen() {
     $node_wrapped->title  = $naam;
     $node_wrapped->author = $import_user->uid;
     $node_wrapped->link->set(array('url' => $website));
+    // Set afdeling email.
+    $node_wrapped->afd_email->set($afdeling->email);
     // Set afdeling id.
     $node_wrapped->afd_id->set($afdeling->id);
     // Get provincie term id.
