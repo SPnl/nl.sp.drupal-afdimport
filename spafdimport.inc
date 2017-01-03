@@ -182,6 +182,7 @@ function spafdimport_afdelingen() {
     if ($status != 'civierror') {
       $node_wrapped->afd_status->set($status);
     }
+    $node_wrapped->status = 1;
     $node_wrapped->save();
     // Store Afdelingsnaam for cleanup.
     $new_afdelingsnames[] = $naam;
