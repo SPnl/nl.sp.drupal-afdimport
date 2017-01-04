@@ -25,12 +25,14 @@ function spafdimport_afdelingen() {
 
   $civiapi->CustomField->Getsingle(array(
     'name' => 'Provincie',
+    'column_name' => 'provincie',
     'return' => 'id',
   ));
   $cf_prov = 'custom_' . $civiapi->result()->id;
 
   $civiapi->CustomField->Getsingle(array(
     'name' => 'Regio',
+    'column_name' => 'regio',
     'return' => 'id',
   ));
   $cf_regio = 'custom_' . $civiapi->result()->id;
