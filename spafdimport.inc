@@ -56,8 +56,10 @@ function spafdimport_afdelingen() {
   ));
   $prov = $civiapi->result()->values;
   $provinces = array(); 
-  foreach($prov as $p) {
-    $provinces[$p->contact_id] = str_replace(array('SP-provincie '), '', $p->display_name);
+  if (!empty($prov)) {
+    foreach($prov as $p) {
+      $provinces[$p->contact_id] = str_replace(array('SP-provincie '), '', $p->display_name);
+    }
   }
 
   // Get regios
@@ -69,125 +71,130 @@ function spafdimport_afdelingen() {
   ));
   $regios_raw = $civiapi->result()->values;
   $regios = array(); 
-  foreach($regios_raw as $r) {
-    $regios[$r->contact_id] = str_replace(array('SP-regio '), '', $r->display_name);
+  if (!empty($regios_raw)) {
+    foreach($regios_raw as $r) {
+      $regios[$r->contact_id] = str_replace(array('SP-regio '), '', $r->display_name);
+    }
   }
 
-  foreach ($afdelingen as $afdeling) {
-    // Show progress.
-    _spafdimport_output_progress();
+  $new_afdelingsnames = array();
+  if (!empty($afdelingen)) {
+    foreach ($afdelingen as $afdeling) {
+      // Show progress.
+      _spafdimport_output_progress();
 
-    // Clean up name
-    $naam = $afdeling->display_name;
-    $naam = trim(str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam));
+      // Clean up name
+      $naam = $afdeling->display_name;
+      $naam = trim(str_ireplace(['SP-afdeling', 'SP afdeling', 'afdeling'], '', $naam));
 
-    // Filter partijbureau.
-    if ($naam == 'SP Partijbureau') {
-      continue;
-    }
+      // Filter partijbureau.
+      if ($naam == 'SP Partijbureau') {
+        continue;
+      }
 
-    // Get website
-    $civiapi->Website->Get(array(
-      'contact_id' => $afdeling->contact_id,
-    ));
-    $websites = $civiapi->result();
-    if ($websites && $websites->count > 0)
-      $website = array_shift($websites->values)->url;
-    else
-      $website = '';
+      // Get website
+      $civiapi->Website->Get(array(
+        'contact_id' => $afdeling->contact_id,
+      ));
+      $websites = $civiapi->result();
+      if ($websites && $websites->count > 0)
+        $website = array_shift($websites->values)->url;
+      else
+        $website = '';
 
-    // Get province name
-    if (array_key_exists($afdeling->$cf_prov, $provinces))
-      $provname = $provinces[$afdeling->$cf_prov];
-    else
-      $provname = '';
-    // echo "$naam $website " . ($provname ? $provname : "<strong>NO PROVINCE</strong>") . "...<br />\n";
+      // Get province name
+      if (array_key_exists($afdeling->$cf_prov, $provinces))
+        $provname = $provinces[$afdeling->$cf_prov];
+      else
+        $provname = '';
+      // echo "$naam $website " . ($provname ? $provname : "<strong>NO PROVINCE</strong>") . "...<br />\n";
 
-    // Get regio name
-    if (array_key_exists($afdeling->$cf_regio, $regios))
-      $regionname = $regios[$afdeling->$cf_regio];
-    else
-      $regionname = '';
+      // Get regio name
+      if (array_key_exists($afdeling->$cf_regio, $regios))
+        $regionname = $regios[$afdeling->$cf_regio];
+      else
+        $regionname = '';
 
 
-    // Get status.
-    $status = '';
-    $civiapi->EntityTag->get(array(
-      'entity_id' => $afdeling->id,
-    ));
+      // Get status.
+      $status = '';
+      $civiapi->EntityTag->get(array(
+        'entity_id' => $afdeling->id,
+      ));
 
-    if (!$civiapi->result()->is_error) {
-      $tags_selected = $civiapi->result()->values;
-      foreach ($tags_selected as $tag) {
-        if (in_array($tag->tag_id, $tags)) {
-          $status = array_search($tag->tag_id, $tags);
-          break;
+      if (!$civiapi->result()->is_error) {
+        $tags_selected = $civiapi->result()->values;
+        foreach ($tags_selected as $tag) {
+          if (in_array($tag->tag_id, $tags)) {
+            $status = array_search($tag->tag_id, $tags);
+            break;
+          }
         }
       }
-    }
-    else {
-      $status = 'civierror';
-    }
+      else {
+        $status = 'civierror';
+      }
 
-    // Rest van het script is zoals de afdimport-module in SPwebteam/sp-website:
+      // Rest van het script is zoals de afdimport-module in SPwebteam/sp-website:
 
-    // Get afdeling.
-    $query = new EntityFieldQuery();
-    $query->entityCondition('entity_type', 'node')
-      ->entityCondition('bundle', 'afdeling')
-      ->propertyCondition('title', $naam);
-    $existing_afdelingen = $query->execute();
+      // Get afdeling.
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node')
+        ->entityCondition('bundle', 'afdeling')
+        ->propertyCondition('title', $naam);
+      $existing_afdelingen = $query->execute();
 
-    // Check if afdeling exists.
-    if ( ! empty($existing_afdelingen['node'])) {
-      // Update existing afdeling with current values.
-      _spafdimport_output_text('Updating afdeling ' . $naam);
-      $node = reset($existing_afdelingen['node']);
+      // Check if afdeling exists.
+      if ( ! empty($existing_afdelingen['node'])) {
+        // Update existing afdeling with current values.
+        _spafdimport_output_text('Updating afdeling ' . $naam);
+        $node = reset($existing_afdelingen['node']);
+      }
+      else {
+        // Create new afdeling.
+        _spafdimport_output_text('Creating afdeling ' . $naam);
+        $node = entity_create('node', array(
+          'type'     => 'afdeling',
+          'title'    => $naam,
+          'status'   => 1,
+          'language' => 'nl',
+          'uid'      => $import_user->uid,
+          'promote'  => 0,
+        ));
+      }
+      // Update values.
+      $node_wrapped         = entity_metadata_wrapper('node', $node);
+      $node_wrapped->title  = $naam;
+      $node_wrapped->author = $import_user->uid;
+      $node_wrapped->link->set(array('url' => $website));
+      // Set afdeling email.
+      if (isset($node_wrapped->afd_email)) {
+        $node_wrapped->afd_email->set($afdeling->email);
+      }
+      // Set afdeling id.
+      if (isset($node_wrapped->afd_id)) {
+        $node_wrapped->afd_id->set($afdeling->id);
+      }
+      // Get provincie term id.
+      $provincie = taxonomy_get_term_by_name($provname, 'provincie');
+      if ( ! empty($provincie)) {
+        $provincie = reset($provincie);
+        $node_wrapped->provincie->set($provincie->tid);
+      }
+      // Get regio term id.
+      $region = taxonomy_get_term_by_name($regionname, 'regio');
+      if ( ! empty($region)) {
+        $region = reset($region);
+        $node_wrapped->regio->set($region->tid);
+      }
+      if ($status != 'civierror') {
+        $node_wrapped->afd_status->set($status);
+      }
+      $node_wrapped->status = 1;
+      $node_wrapped->save();
+      // Store Afdelingsnaam for cleanup.
+      $new_afdelingsnames[] = $naam;
     }
-    else {
-      // Create new afdeling.
-      _spafdimport_output_text('Creating afdeling ' . $naam);
-      $node = entity_create('node', array(
-        'type'     => 'afdeling',
-        'title'    => $naam,
-        'status'   => 1,
-        'language' => 'nl',
-        'uid'      => $import_user->uid,
-        'promote'  => 0,
-      ));
-    }
-    // Update values.
-    $node_wrapped         = entity_metadata_wrapper('node', $node);
-    $node_wrapped->title  = $naam;
-    $node_wrapped->author = $import_user->uid;
-    $node_wrapped->link->set(array('url' => $website));
-    // Set afdeling email.
-    if (isset($node_wrapped->afd_email)) {
-      $node_wrapped->afd_email->set($afdeling->email);
-    }
-    // Set afdeling id.
-    if (isset($node_wrapped->afd_id)) {
-      $node_wrapped->afd_id->set($afdeling->id);
-    }
-    // Get provincie term id.
-    $provincie = taxonomy_get_term_by_name($provname, 'provincie');
-    if ( ! empty($provincie)) {
-      $provincie = reset($provincie);
-      $node_wrapped->provincie->set($provincie->tid);
-    }
-    // Get regio term id.
-    $region = taxonomy_get_term_by_name($regionname, 'regio');
-    if ( ! empty($region)) {
-      $region = reset($region);
-      $node_wrapped->regio->set($region->tid);
-    }
-    if ($status != 'civierror') {
-      $node_wrapped->afd_status->set($status);
-    }
-    $node_wrapped->status = 1;
-    $node_wrapped->save();
-    // Store Afdelingsnaam for cleanup.
-    $new_afdelingsnames[] = $naam;
   }
   // Cleanup afdelingen that do not exist anymore.
   _spafdimport_output_text("\n");
