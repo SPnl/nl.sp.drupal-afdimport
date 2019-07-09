@@ -195,25 +195,25 @@ function spafdimport_afdelingen() {
       // Store Afdelingsnaam for cleanup.
       $new_afdelingsnames[] = $naam;
     }
-  }
-  // Cleanup afdelingen that do not exist anymore.
-  _spafdimport_output_text("\n");
-  $query = new EntityFieldQuery();
-  // Get current afdelingen.
-  $query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle', 'afdeling');
-  $afdelingen = $query->execute();
-  foreach ($afdelingen['node'] as $afdeling) {
-    $node = node_load($afdeling->nid);
-    if ( ! in_array($node->title, $new_afdelingsnames)) {
-      // Unpublish afdeling.
-      _spafdimport_output_text('Unpublishing afdeling ' . $node->title);
-      $node->status = 0;
-      node_save($node);
-    }
-    else {
-      // Rebuild node permissions.
-      node_access_acquire_grants($node);
+    // Cleanup afdelingen that do not exist anymore.
+    _spafdimport_output_text("\n");
+    $query = new EntityFieldQuery();
+    // Get current afdelingen.
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'afdeling');
+    $afdelingen = $query->execute();
+    foreach ($afdelingen['node'] as $afdeling) {
+      $node = node_load($afdeling->nid);
+      if ( ! in_array($node->title, $new_afdelingsnames)) {
+        // Unpublish afdeling.
+        _spafdimport_output_text('Unpublishing afdeling ' . $node->title);
+        $node->status = 0;
+        node_save($node);
+      }
+      else {
+        // Rebuild node permissions.
+        node_access_acquire_grants($node);
+      }
     }
   }
   _spafdimport_output_finish();
