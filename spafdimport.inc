@@ -37,7 +37,7 @@ function spafdimport_afdelingen() {
         }
       }
 
-      if (!empty($property) && !empty($chapter_info_proc['contact_number'])) {
+      if (!empty($property)) {
         // Get afdeling.
         $query = new EntityFieldQuery();
         $query->entityCondition('entity_type', 'node')
