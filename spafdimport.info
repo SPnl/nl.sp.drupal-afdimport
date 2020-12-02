@@ -1,8 +1,8 @@
 name = SP Afdelingsimport
-description = Opvragen van afdelingen uit CiviCRM voor gebruik op SP.nl
+description = Opvragen van afdelingen uit Procurios
 version = 1.0
 core = 7.x
 package = sprbs
-dependencies[] = spciviapi
+dependencies[] = procapi
 dependencies[] = afdeling
 dependencies[] = entity

@@ -6,15 +6,49 @@
 
 function spafdimport_menu() {
 
-	$items = array();
+  $items['admin/config/sp/afdimport-run'] = array(
+    'title'            => 'Afdelingsimport uitvoeren',
+    'type'             => MENU_CALLBACK,
+    'page callback'    => 'spafdimport_afdelingen',
+    'access arguments' => array('access administration pages'),
+    'file'             => 'spafdimport.inc',
+  );
 
-	$items['admin/config/sp/afdimport-run'] = array(
-		'title'            => 'Afdelingsimport uitvoeren',
-		'type'             => MENU_CALLBACK,
-		'page callback'    => 'spafdimport_afdelingen',
-		'access arguments' => array('access administration pages'),
-		'file'             => 'spafdimport.inc',
-	);
+  $items['admin/config/sp/spafdimport'] = array(
+    'title' => 'SP afdelingen importer',
+    'type' => MENU_NORMAL_ITEM,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('spafdimport_settings_form'),
+    'file' => 'spafdimport.admin.inc',
+    'access callback' => 'spafdimport_access_check',
+  );
 
-	return $items;
+  $items['admin/config/sp/spafdimport/settings'] = array(
+    'title' => 'Instellingen',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'access callback' => 'spafdimport_access_check',
+    'weight' => '0',
+  );
+
+  return $items;
 }
+
+/**
+ * @return bool Has SPRBS configuration access
+ */
+function spafdimport_access_check() {
+  return (user_access('administer site configuration') || user_access('administer sp afdimport'));
+}
+
+/**
+ * Definces permission to administer afdeling importer.
+ */
+function spafdimport_permission() {
+  return array(
+    'administer sp afdimport' => array(
+      'title' => 'Beheer SP afdelingen importer',
+      'description' => 'Beheer de instellingen voor de SP afdelingen importer module.',
+    ),
+  );
+}
+
