@@ -11,6 +11,7 @@ function spafdimport_settings_form($form, $form_state) {
     '#type' => 'select',
     '#title' => 'Kies de selectie in Procurios met alle afdelingen',
     '#options' => $selections_list,
+    '#default_value' => variable_get('spafdimport_procurios_selection_id'),
   );
 
   return system_settings_form($form);
