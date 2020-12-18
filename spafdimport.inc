@@ -7,7 +7,9 @@ function spafdimport_afdelingen() {
   $chapters_info_proc = array();
   $selection_id = variable_get('spafdimport_procurios_selection_id');
   $page_nr = 1;
+  _spafdimport_output_text('Getting chapters from Procurios');
   while ($result = procapi_selection_get_relations($selection_id, $page_nr)) {
+    _spafdimport_output_text('Page ' . $page_nr);
     $page_nr++;
     $chapters_info_proc = array_merge($chapters_info_proc, $result);
   }
@@ -16,9 +18,7 @@ function spafdimport_afdelingen() {
   if (!empty($chapters_info_proc)) {
     $import_user = spafdimport_get_import_user();
     foreach ($chapters_info_proc as $chapter_info_proc) {
-      // Show progress.
-      _spafdimport_output_progress();
-
+      $node = NULL;
       // Check afdling status.
       $property = '';
       $property_mapping = array (
@@ -47,12 +47,11 @@ function spafdimport_afdelingen() {
 
         // Check if afdeling exists.
         if ( ! empty($existing_afdeling['node'])) {
-          _spafdimport_output_text('Updating afdeling ' . $chapter_info_proc['name']);
           $node = reset($existing_afdeling['node']);
+          _spafdimport_output_text('Updating afdeling ' . $chapter_info_proc['name']);
         }
-        else {
-          // Check if property is set.
 
+        if (empty($node)) {
           // Create new afdeling.
           _spafdimport_output_text('Creating afdeling ' . $chapter_info_proc['name']);
           $node = entity_create('node', array(
@@ -66,14 +65,26 @@ function spafdimport_afdelingen() {
         }
 
         // Update values.
-        $node_wrapped         = entity_metadata_wrapper('node', $node);
+        $node_wrapped = entity_metadata_wrapper('node', $node);
+
+        // Get provincie term id.
+        $provincie = taxonomy_get_term_by_name($chapter_info_proc['address']['province'], 'provincie');
+        if ( ! empty($provincie)) {
+          $provincie = reset($provincie);
+          $node_wrapped->provincie->set($provincie->tid);
+        }
+        // Get regio term id.
+        $region = taxonomy_get_term_by_name(substr_replace('SP-regio ', '', $chapter_info_proc['region_name'], 'regio'));
+        if ( ! empty($region)) {
+          $region = reset($region);
+          $node_wrapped->regio->set($region->tid);
+        }
+
         $node_wrapped->title  = $chapter_info_proc['name'];
         $node_wrapped->author = $import_user->uid;
-        //$node_wrapped->link->set(array('url' => $chaper_info_proc['TODO']));
+        $node_wrapped->link->set(array('url' => $chapter_info_proc['website']));
         $node_wrapped->afd_email->set($chapter_info_proc['email']);
         $node_wrapped->afd_id->set($chapter_info_proc['contact_number']);
-        //$node_wrapped->provincie->set($chapter_info_proc['TODO']);
-        //$node_wrapped->regio->set($chapter_info_proc['TODO']);
         $node_wrapped->afd_status->set($property);
         $node_wrapped->status = 1;
         $node_wrapped->save();
@@ -90,7 +101,7 @@ function spafdimport_afdelingen() {
     $afdelingen = $query->execute();
     foreach ($afdelingen['node'] as $afdeling) {
       $node = node_load($afdeling->nid);
-      if ( ! in_array($node->afd_id['und'][0]['value'], $imported_afdeling_contact_numbers)) {
+      if ( ! in_array($node->afd_id['und'][0]['value'], $imported_afdeling_contact_numbers) && !empty($node->status)) {
         // Unpublish afdeling.
         _spafdimport_output_text('Unpublishing afdeling ' . $node->title);
         $node->status = 0;
