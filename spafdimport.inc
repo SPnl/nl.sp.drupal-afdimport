@@ -27,7 +27,7 @@ function spafdimport_afdelingen() {
         11 => 'Opgeheven',
         12 => 'Werkgroep',
       );
-      if (!empty($chapter_info_proc['properties']) && !empty($chapter_info_proc['contact_number'])) {
+      if (!empty($chapter_info_proc['properties']) && !empty($chapter_info_proc['department_contact_number'])) {
         foreach ($chapter_info_proc['properties'] as $property_id => $property_is_set) {
           if ($property_is_set) {
             if (isset($property_mapping[$property_id])) {
@@ -42,7 +42,7 @@ function spafdimport_afdelingen() {
         $query = new EntityFieldQuery();
         $query->entityCondition('entity_type', 'node')
           ->entityCondition('bundle', 'afdeling')
-          ->fieldCondition('afd_id', 'value', $chapter_info_proc['contact_number']);
+          ->fieldCondition('afd_id', 'value', $chapter_info_proc['department_contact_number']);
         $existing_afdeling = $query->execute();
 
         // Check if afdeling exists.
@@ -84,12 +84,12 @@ function spafdimport_afdelingen() {
         $node_wrapped->author = $import_user->uid;
         $node_wrapped->link->set(array('url' => $chapter_info_proc['website']));
         $node_wrapped->afd_email->set($chapter_info_proc['email']);
-        $node_wrapped->afd_id->set($chapter_info_proc['contact_number']);
+        $node_wrapped->afd_id->set($chapter_info_proc['department_contact_number']);
         $node_wrapped->afd_status->set($property);
         $node_wrapped->status = 1;
         $node_wrapped->save();
         // Store imported chapter ids for cleanup.
-        $imported_afdeling_contact_numbers[$chapter_info_proc['contact_number']] = $chapter_info_proc['contact_number'];
+        $imported_afdeling_contact_numbers[$chapter_info_proc['department_contact_number']] = $chapter_info_proc['department_contact_number'];
       }
     }
     // Cleanup afdelingen that do not exist anymore.
