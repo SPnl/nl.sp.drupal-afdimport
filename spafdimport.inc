@@ -27,7 +27,7 @@ function spafdimport_afdelingen() {
         11 => 'Opgeheven',
         12 => 'Werkgroep',
       );
-      if (!empty($chapter_info_proc['properties'])) {
+      if (!empty($chapter_info_proc['properties']) && !empty($chapter_info_proc['contact_number'])) {
         foreach ($chapter_info_proc['properties'] as $property_id => $property_is_set) {
           if ($property_is_set) {
             if (isset($property_mapping[$property_id])) {
